@@ -14,7 +14,7 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         }
 
         [HttpGet]
-        [Route("")]
+        [Route]
         public IHttpActionResult Get()
         {
             return Ok(_service.Get());
@@ -29,7 +29,7 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         }
 
         [HttpPost]
-        [Route("")]
+        [Route]
         public IHttpActionResult Post(int id, string description)
         {
             _service.Update(id, description);
@@ -38,7 +38,7 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         }
 
         [HttpPut]
-        [Route("")]
+        [Route]
         public IHttpActionResult Put(string description)
         {
             var target = _service.Add(description);
@@ -46,7 +46,7 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         }
 
         [HttpDelete]
-        [Route("")]
+        [Route]
         public IHttpActionResult Delete(int id)
         {
             _service.Remove(id);
