@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Web.Http;
 using System.Web.Http.Dispatcher;
 using DotNetOwinWebApiSample.Api.Controllers;
+using DotNetOwinWebApiSample.Api.Middlewares;
 using DotNetOwinWebApiSample.Api.Models;
 using DotNetOwinWebApiSample.Api.Repositories;
 using DotNetOwinWebApiSample.Api.Services;
@@ -21,6 +22,7 @@ namespace DoteNetOwinWebApiSample.Api.Test
             configuration.Services.Replace(typeof(IAssembliesResolver), new TestWebApiResolver());
             configuration.MapHttpAttributeRoutes();
 
+            app.Use<ErrorHandlingMiddleware>();
             TestUtil.Kernel = CreateKernel();
             app.UseNinjectMiddleware(() => TestUtil.Kernel);
             app.UseNinjectWebApi(configuration);

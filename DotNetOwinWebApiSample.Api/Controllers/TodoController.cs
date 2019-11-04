@@ -25,7 +25,6 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         public IHttpActionResult Get(int id)
         {
             var target = _service.Get(id);
-            if (target == null) return NotFound();
             return Ok(target);
         }
 
@@ -35,7 +34,6 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         {
             _service.Update(id, description);
             var target = _service.Get(id);
-            if (target == null) return NotFound();
             return Ok(target);
         }
 
@@ -51,9 +49,6 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         [Route("")]
         public IHttpActionResult Delete(int id)
         {
-            var target = _service.Get(id);
-            if (target == null) return NotFound();
-
             _service.Remove(id);
             return Ok();
         }

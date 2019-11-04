@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using DotNetOwinWebApiSample.Api.Exceptions;
 using DotNetOwinWebApiSample.Api.Models;
 using DotNetOwinWebApiSample.Api.Repositories;
 
@@ -21,7 +22,7 @@ namespace DotNetOwinWebApiSample.Api.Services
 
         public Todo Get(int id)
         {
-            return _repository.Get().FirstOrDefault(_ => _.Id == id);
+            return _repository.Get().FirstOrDefault(_ => _.Id == id) ?? throw new ApiNotFoundException("対象が存在しません。");
         }
 
         public Todo Add(string description)
@@ -30,7 +31,7 @@ namespace DotNetOwinWebApiSample.Api.Services
             var todo = new Todo
             {
                 Id = id,
-                Description = description,
+                Description = description ?? throw new ApiBadRequestException("descriptionが未入力です。"),
                 CreatedDate = DateTime.Now
             };
             _repository.Add(todo);
@@ -40,12 +41,17 @@ namespace DotNetOwinWebApiSample.Api.Services
         public void Update(int id, string description)
         {
             var todo = Get(id);
-            todo.Description = description;
+            if (todo == null) throw new ApiNotFoundException("対象が存在しません。");
+
+            todo.Description = description ?? throw new ApiBadRequestException("descriptionが未入力です。");
             _repository.Update(todo);
         }
 
         public void Remove(int id)
         {
+            var todo = Get(id);
+            if (todo == null) throw new ApiNotFoundException("対象が存在しません。");
+
             _repository.Remove(Get(id));
         }
     }
