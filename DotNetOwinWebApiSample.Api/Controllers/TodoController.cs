@@ -1,6 +1,5 @@
-﻿using System.Linq;
+﻿using DotNetOwinWebApiSample.Api.Services;
 using System.Web.Http;
-using DotNetOwinWebApiSample.Api.Services;
 
 namespace DotNetOwinWebApiSample.Api.Controllers
 {
@@ -25,10 +24,38 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         [Route("{id:int}")]
         public IHttpActionResult Get(int id)
         {
-            var target = _service.Get().FirstOrDefault(_ => _.Id == id);
+            var target = _service.Get(id);
             if (target == null) return NotFound();
             return Ok(target);
         }
 
+        [HttpPost]
+        [Route("")]
+        public IHttpActionResult Post(int id, string description)
+        {
+            _service.Update(id, description);
+            var target = _service.Get(id);
+            if (target == null) return NotFound();
+            return Ok(target);
+        }
+
+        [HttpPut]
+        [Route("")]
+        public IHttpActionResult Put(string description)
+        {
+            var target = _service.Add(description);
+            return Ok(target);
+        }
+
+        [HttpDelete]
+        [Route("")]
+        public IHttpActionResult Delete(int id)
+        {
+            var target = _service.Get(id);
+            if (target == null) return NotFound();
+
+            _service.Remove(id);
+            return Ok();
+        }
     }
 }
