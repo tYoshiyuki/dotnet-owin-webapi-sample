@@ -22,7 +22,8 @@ namespace DotNetOwinWebApiSample.Api
         {
             var configuration = new HttpConfiguration();
             configuration.MapHttpAttributeRoutes();
-            // ErrorHandlingMiddlewareで例外処理を統括するため、既定の例外制御を抑止する
+
+            // ErrorHandlingMiddlewareで例外処理を統括するため、既定の例外制御を抑止します
             configuration.Services.Replace(typeof(IExceptionHandler), new PassthroughExceptionHandler());
 
             SwaggerConfig.Register(configuration);
@@ -32,6 +33,10 @@ namespace DotNetOwinWebApiSample.Api
             app.UseNinjectWebApi(configuration);
         }
 
+        /// <summary>
+        /// DIの設定を行います
+        /// </summary>
+        /// <returns>StandardKernel</returns>
         private static StandardKernel CreateKernel()
         {
             var kernel = new StandardKernel();

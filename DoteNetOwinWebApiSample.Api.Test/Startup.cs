@@ -19,6 +19,8 @@ namespace DoteNetOwinWebApiSample.Api.Test
         public void Configuration(IAppBuilder app)
         {
             var configuration = new HttpConfiguration();
+
+            // テスト対象となるコントローラを MVC の処理対象に登録します
             configuration.Services.Replace(typeof(IAssembliesResolver), new TestWebApiResolver());
             configuration.MapHttpAttributeRoutes();
 
@@ -28,6 +30,10 @@ namespace DoteNetOwinWebApiSample.Api.Test
             app.UseNinjectWebApi(configuration);
         }
 
+        /// <summary>
+        /// DIの設定を行います
+        /// </summary>
+        /// <returns></returns>
         private static IKernel CreateKernel()
         {
             var kernel = new StandardKernel();
@@ -37,6 +43,9 @@ namespace DoteNetOwinWebApiSample.Api.Test
             return kernel;
         }
 
+        /// <summary>
+        /// テスト対象となるコントローラのアセンブリを取得します
+        /// </summary>
         public class TestWebApiResolver : DefaultAssembliesResolver
         {
             public override ICollection<Assembly> GetAssemblies()
@@ -49,6 +58,9 @@ namespace DoteNetOwinWebApiSample.Api.Test
 
     public class TestUtil
     {
+        /// <summary>
+        /// テスト用にDIコンテナへのアクセッサを提供します
+        /// </summary>
         public static IKernel Kernel { get; set; }
     }
 }

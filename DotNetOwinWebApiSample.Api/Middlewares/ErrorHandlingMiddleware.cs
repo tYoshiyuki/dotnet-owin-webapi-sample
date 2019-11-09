@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace DotNetOwinWebApiSample.Api.Middlewares
 {
+    /// <summary>
+    /// 既定の例外処理を行うミドルウェアです
+    /// </summary>
     public class ErrorHandlingMiddleware : OwinMiddleware
     {
 
@@ -26,12 +29,27 @@ namespace DotNetOwinWebApiSample.Api.Middlewares
             }
         }
 
+        /// <summary>
+        /// ロジック内で発生した例外に応じて処理を行います
+        /// </summary>
+        /// <param name="context">IOwinContext</param>
+        /// <param name="ex">Exception</param>
+        /// <returns>Task</returns>
         private static Task HandleExceptionAsync(IOwinContext context, Exception ex)
         {
+            // 例外に応じてHTTPステータスコードを設定します
             var code = HttpStatusCode.InternalServerError;
-            if (ex is ApiBadRequestException) code = HttpStatusCode.BadRequest;
-            if (ex is ApiNotFoundException) code = HttpStatusCode.NotFound;
+            switch (ex)
+            {
+                case ApiBadRequestException _:
+                    code = HttpStatusCode.BadRequest;
+                    break;
+                case ApiNotFoundException _:
+                    code = HttpStatusCode.NotFound;
+                    break;
+            }
 
+            // エラーメッセージを設定します
             var result = JsonConvert.SerializeObject(new { error = ex.Message });
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)code;
