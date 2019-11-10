@@ -8,7 +8,7 @@ using Newtonsoft.Json;
 namespace DotNetOwinWebApiSample.Api.Middlewares
 {
     /// <summary>
-    ///     基底の例外処理を行うミドルウェアです
+    /// 基底の例外処理を行うミドルウェアです
     /// </summary>
     public class ErrorHandlingMiddleware : OwinMiddleware
     {
@@ -29,7 +29,7 @@ namespace DotNetOwinWebApiSample.Api.Middlewares
         }
 
         /// <summary>
-        ///     ロジック内で発生した例外に応じて処理を行います
+        /// ロジック内で発生した例外に応じて処理を行います
         /// </summary>
         /// <param name="context">IOwinContext</param>
         /// <param name="ex">Exception</param>
