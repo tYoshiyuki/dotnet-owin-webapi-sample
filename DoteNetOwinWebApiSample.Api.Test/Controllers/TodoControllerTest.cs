@@ -1,49 +1,45 @@
 ﻿using DotNetOwinWebApiSample.Api.Models;
-using DotNetOwinWebApiSample.Api.Repositories;
 using Microsoft.Owin.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ninject;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using DotNetOwinWebApiSample.Api;
 
 namespace DoteNetOwinWebApiSample.Api.Test.Controllers
 {
     [TestClass]
-    [TestCategory("Todo"), TestCategory("e2e")]
+    [TestCategory("Todo"), TestCategory("Integration")]
     public class TodoControllerTest
     {
         private readonly string _url = "http://localhost/api/todo";
         private static TestServer Server { get; set; }
-        private static HttpClient Client { get; set; }
+        private static HttpClient HttpClient { get; set; }
 
         [ClassInitialize]
         public static void Setup(TestContext context)
         {
             Server = TestServer.Create<Startup>();
-            Client = new HttpClient(Server.Handler);
+            HttpClient = Server.HttpClient;
         }
 
         [TestMethod]
         public async Task Get_正常系()
         {
-            // Arrange
-            var expect = TestUtil.Kernel.Get<TodoRepository>().Get().ToList();
-
-            // Act
-            var response = await Client.GetAsync(_url);
-            var result = await response.Content.ReadAsAsync<List<Todo>>();
+            // Arrange・Act
+            var response = await HttpClient.GetAsync(_url);
 
             // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadAsAsync<List<Todo>>();
             Assert.IsTrue(result.Any());
-            Assert.AreEqual(result.Count, expect.Count);
         }
 
         [ClassCleanup]
         public static void Dispose()
         {
-            Client.Dispose();
             Server.Dispose();
         }
     }
