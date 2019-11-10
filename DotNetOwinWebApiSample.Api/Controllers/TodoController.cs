@@ -1,5 +1,5 @@
-﻿using DotNetOwinWebApiSample.Api.Services;
-using System.Web.Http;
+﻿using System.Web.Http;
+using DotNetOwinWebApiSample.Api.Services;
 
 namespace DotNetOwinWebApiSample.Api.Controllers
 {

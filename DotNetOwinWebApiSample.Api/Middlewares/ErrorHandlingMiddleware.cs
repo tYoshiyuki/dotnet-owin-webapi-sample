@@ -1,18 +1,17 @@
-﻿using DotNetOwinWebApiSample.Api.Exceptions;
-using Microsoft.Owin;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Net;
 using System.Threading.Tasks;
+using DotNetOwinWebApiSample.Api.Exceptions;
+using Microsoft.Owin;
+using Newtonsoft.Json;
 
 namespace DotNetOwinWebApiSample.Api.Middlewares
 {
     /// <summary>
-    /// 既定の例外処理を行うミドルウェアです
+    ///     基底の例外処理を行うミドルウェアです
     /// </summary>
     public class ErrorHandlingMiddleware : OwinMiddleware
     {
-
         public ErrorHandlingMiddleware(OwinMiddleware next) : base(next)
         {
         }
@@ -30,7 +29,7 @@ namespace DotNetOwinWebApiSample.Api.Middlewares
         }
 
         /// <summary>
-        /// ロジック内で発生した例外に応じて処理を行います
+        ///     ロジック内で発生した例外に応じて処理を行います
         /// </summary>
         /// <param name="context">IOwinContext</param>
         /// <param name="ex">Exception</param>
@@ -50,11 +49,10 @@ namespace DotNetOwinWebApiSample.Api.Middlewares
             }
 
             // エラーメッセージを設定します
-            var result = JsonConvert.SerializeObject(new { error = ex.Message });
+            var result = JsonConvert.SerializeObject(new {error = ex.Message});
             context.Response.ContentType = "application/json";
-            context.Response.StatusCode = (int)code;
+            context.Response.StatusCode = (int) code;
             return context.Response.WriteAsync(result);
         }
-
     }
 }

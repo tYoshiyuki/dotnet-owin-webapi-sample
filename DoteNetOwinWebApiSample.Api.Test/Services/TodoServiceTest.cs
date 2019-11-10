@@ -11,11 +11,10 @@ using Moq;
 namespace DoteNetOwinWebApiSample.Api.Test.Services
 {
     [TestClass]
-    [TestCategory("Todo"), TestCategory("Logic")]
+    [TestCategory("Todo")]
+    [TestCategory("Logic")]
     public class TodoServiceTest
     {
-        private TodoService _service;
-        private Mock<IRepository<Todo>> _mock;
         private readonly List<Todo> _data = new List<Todo>
         {
             new Todo {Id = 1, Description = "Test 001", CreatedDate = DateTime.Now},
@@ -23,6 +22,9 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
             new Todo {Id = 3, Description = "Test 003", CreatedDate = DateTime.Now},
             new Todo {Id = 4, Description = "Test 004", CreatedDate = DateTime.Now}
         };
+
+        private Mock<IRepository<Todo>> _mock;
+        private TodoService _service;
 
         [TestInitialize]
         public void Before()
@@ -77,6 +79,5 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
             // Assert
             Assert.Fail("通ってはいけないロジック。");
         }
-
     }
 }

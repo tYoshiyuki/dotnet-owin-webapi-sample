@@ -5,14 +5,15 @@ using System.Web.Http.ExceptionHandling;
 
 namespace DotNetOwinWebApiSample.Api.ExceptionHandler
 {
+    /// <summary>
+    ///     例外を処理せずにスローするExceptionHandlerです
+    /// </summary>
     public class PassthroughExceptionHandler : IExceptionHandler
     {
         public Task HandleAsync(ExceptionHandlerContext context, CancellationToken cancellationToken)
         {
-            var info = ExceptionDispatchInfo.Capture(context.Exception);
-            info.Throw();
+            ExceptionDispatchInfo.Capture(context.Exception).Throw();
             return Task.CompletedTask;
         }
-
     }
 }

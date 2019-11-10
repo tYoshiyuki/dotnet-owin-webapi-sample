@@ -1,17 +1,18 @@
-﻿using DotNetOwinWebApiSample.Api.Models;
-using Microsoft.Owin.Testing;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using DotNetOwinWebApiSample.Api;
+using DotNetOwinWebApiSample.Api.Models;
+using Microsoft.Owin.Testing;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DoteNetOwinWebApiSample.Api.Test.Controllers
 {
     [TestClass]
-    [TestCategory("Todo"), TestCategory("Integration")]
+    [TestCategory("Todo")]
+    [TestCategory("Integration")]
     public class TodoControllerTest
     {
         private readonly string _url = "http://localhost/api/todo";

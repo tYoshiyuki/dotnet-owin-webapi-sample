@@ -30,7 +30,7 @@ namespace DoteNetOwinWebApiSample.Api.Test.Middlewares
         }
 
         [TestMethod]
-        public async Task HandleExceptionAsync()
+        public async Task HandleException()
         {
             // Act
             var response = await Client.GetAsync(_url);
@@ -77,7 +77,7 @@ namespace DoteNetOwinWebApiSample.Api.Test.Middlewares
         {
             public override ICollection<Assembly> GetAssemblies()
             {
-                return new List<Assembly> { typeof(TestController).Assembly };
+                return new List<Assembly> {typeof(TestController).Assembly};
             }
         }
     }

@@ -1,18 +1,19 @@
 ﻿using System.Reflection;
 using System.Web.Http;
 using System.Web.Http.ExceptionHandling;
+using DotNetOwinWebApiSample.Api;
+using DotNetOwinWebApiSample.Api.ExceptionHandler;
 using DotNetOwinWebApiSample.Api.Middlewares;
 using DotNetOwinWebApiSample.Api.Models;
 using DotNetOwinWebApiSample.Api.Repositories;
 using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.Owin;
 using Ninject;
-using Owin;
 using Ninject.Web.Common.OwinHost;
 using Ninject.Web.WebApi.OwinHost;
-using DotNetOwinWebApiSample.Api.ExceptionHandler;
+using Owin;
 
-[assembly: OwinStartup(typeof(DotNetOwinWebApiSample.Api.Startup))]
+[assembly: OwinStartup(typeof(Startup))]
 
 namespace DotNetOwinWebApiSample.Api
 {
@@ -23,7 +24,7 @@ namespace DotNetOwinWebApiSample.Api
             var configuration = new HttpConfiguration();
             configuration.MapHttpAttributeRoutes();
 
-            // ErrorHandlingMiddlewareで例外処理を統括するため、既定の例外制御を抑止します
+            // ErrorHandlingMiddlewareで例外処理を行うため、既定の例外制御を抑止します
             configuration.Services.Replace(typeof(IExceptionHandler), new PassthroughExceptionHandler());
 
             SwaggerConfig.Register(configuration);
@@ -34,7 +35,7 @@ namespace DotNetOwinWebApiSample.Api
         }
 
         /// <summary>
-        /// DIの設定を行います
+        ///     DIの設定を行います
         /// </summary>
         /// <returns>StandardKernel</returns>
         private static StandardKernel CreateKernel()

@@ -1,6 +1,4 @@
 using System.Web.Http;
-using WebActivatorEx;
-using DotNetOwinWebApiSample.Api;
 using Swashbuckle.Application;
 
 namespace DotNetOwinWebApiSample.Api
@@ -12,13 +10,8 @@ namespace DotNetOwinWebApiSample.Api
             var thisAssembly = typeof(SwaggerConfig).Assembly;
 
             configuration
-                .EnableSwagger(c =>
-                    {
-                        c.SingleApiVersion("v1", "DotNetOwinWebApiSample.Api");
-                    })
-                .EnableSwaggerUi(c =>
-                    {
-                    });
+                .EnableSwagger(c => { c.SingleApiVersion("v1", "DotNetOwinWebApiSample.Api"); })
+                .EnableSwaggerUi(c => { });
         }
     }
 }
