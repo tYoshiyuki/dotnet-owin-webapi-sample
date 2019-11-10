@@ -35,7 +35,7 @@ namespace DotNetOwinWebApiSample.Api
         }
 
         /// <summary>
-        ///     DIの設定を行います
+        /// DIの設定を行います
         /// </summary>
         /// <returns>StandardKernel</returns>
         private static StandardKernel CreateKernel()
