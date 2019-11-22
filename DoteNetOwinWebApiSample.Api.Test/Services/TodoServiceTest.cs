@@ -11,8 +11,7 @@ using Moq;
 namespace DoteNetOwinWebApiSample.Api.Test.Services
 {
     [TestClass]
-    [TestCategory("Todo")]
-    [TestCategory("Logic")]
+    [TestCategory("Todo"), TestCategory("Logic")]
     public class TodoServiceTest
     {
         private readonly List<Todo> _data = new List<Todo>
@@ -81,6 +80,32 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
 
             // Assert
             Assert.Fail("通ってはいけないロジック。");
+        }
+
+
+        [DataTestMethod]
+        [DynamicData(nameof(TestData), DynamicDataSourceType.Method)]
+        public void Update_正常系(Todo todo)
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act
+            _service.Update(todo);
+
+            // Assert
+            var expect = _service.Get(todo.Id);
+            Assert.AreEqual(todo.Id, expect.Id);
+            Assert.AreEqual(todo.Description, expect.Description);
+        }
+
+        public static IEnumerable<object[]> TestData()
+        {
+            yield return new object[] { new Todo { Id = 1, Description = "Test 991", CreatedDate = DateTime.Now } };
+            yield return new object[] { new Todo { Id = 2, Description = "Test 992", CreatedDate = DateTime.Now } };
+            yield return new object[] { new Todo { Id = 3, Description = "Test 993", CreatedDate = DateTime.Now } };
         }
     }
 }

@@ -48,6 +48,12 @@ namespace DotNetOwinWebApiSample.Api.Services
             _repository.Update(todo);
         }
 
+        public void Update(Todo todo)
+        {
+            if (todo == null) throw new ApiBadRequestException("todoがnullです。");
+            Update(todo.Id, todo.Description);
+        }
+
         public void Remove(int id)
         {
             var todo = Get(id);

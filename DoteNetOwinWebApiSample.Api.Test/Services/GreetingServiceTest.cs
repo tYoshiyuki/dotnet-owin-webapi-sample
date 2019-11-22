@@ -4,8 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace DoteNetOwinWebApiSample.Api.Test.Services
 {
     [TestClass]
-    [TestCategory("Greeting")]
-    [TestCategory("Logic")]
+    [TestCategory("Logic"), TestCategory("Greeting")]
     public class GreetingServiceTest
     {
         private static GreetingService _service;

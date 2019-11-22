@@ -11,8 +11,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace DoteNetOwinWebApiSample.Api.Test.Controllers
 {
     [TestClass]
-    [TestCategory("Todo")]
-    [TestCategory("Integration")]
+    [TestCategory("Todo"), TestCategory("Integration")]
     public class TodoControllerTest
     {
         private readonly string _url = "http://localhost/api/todo";
