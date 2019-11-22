@@ -49,8 +49,11 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
             CollectionAssert.AreEqual(_data, result);
         }
 
-        [TestMethod]
-        public void Get_ById_正常系()
+        [DataTestMethod]
+        [DataRow(1)]
+        [DataRow(2)]
+        [DataRow(3)]
+        public void Get_ById_正常系(int id)
         {
             // Arrange
             _mock.Setup(_ => _.Get())
@@ -58,10 +61,10 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
             _service = new TodoService(_mock.Object);
 
             // Act
-            var result = _service.Get(1);
+            var result = _service.Get(id);
 
             // Assert
-            Assert.AreEqual(_data.Find(_ => _.Id == 1), result);
+            Assert.AreEqual(_data.Find(_ => _.Id == id), result);
         }
 
         [TestMethod]
