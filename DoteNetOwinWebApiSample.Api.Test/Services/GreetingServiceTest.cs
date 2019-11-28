@@ -1,4 +1,5 @@
-﻿using DotNetOwinWebApiSample.Api.Services;
+﻿using System.Diagnostics;
+using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DoteNetOwinWebApiSample.Api.Test.Services
@@ -12,6 +13,7 @@ namespace DoteNetOwinWebApiSample.Api.Test.Services
         [ClassInitialize]
         public static void Setup(TestContext context)
         {
+            Trace.WriteLine("ClassInitialize GreetingServiceTest");
             _service = new GreetingService();
         }
 
