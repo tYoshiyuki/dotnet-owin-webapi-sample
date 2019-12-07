@@ -24,16 +24,93 @@ steps:
     configuration: '$(BuildConfiguration)'
 
 - script: |
-   %OPEN_COVER_PATH% -register -target:%MSTEST_PATH% -targetargs:%TARGET_FILE_AND_ARGS% -targetdir:%TARGET_DIR% -filter:%FILTER% -output:%OUTPUT_FILE%
+   if not %TEST_CATEGORY%==all set TARGET_TEST_CATEGORY="/TestCaseFilter:TestCategory=%TEST_CATEGORY%"
+   
+   %OPEN_COVER_PATH% -register -target:%MSTEST_PATH% -targetargs:%TARGET_FILE_AND_ARGS% -targetdir:%TARGET_DIR% -targetargs:%TARGET_TEST_CATEGORY% -filter:%FILTER% -output:%OUTPUT_FILE%
    
   displayName: 'Test and output coverage'
   env:
     MSTEST_PATH: "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
     TARGET_DIR: ".\DotNetOwinWebApiSample.Api.Test\bin\Debug"
-    TARGET_FILE_AND_ARGS: "DotNetOwinWebApiSample.Api.Test.dll /Logger:trx"
+    TARGET_FILE_AND_ARGS: "DotNetOwinWebApiSample.Api.Test.dll /Logger:trx;LogFileName=DotNetOwinWebApiSample.Api.Test.trx"
     FILTER: "+[DotNetOwinWebApiSample*]* -[*.Test.*]*"
     OUTPUT_FILE: "coverage.xml"
     OPEN_COVER_PATH: ".\packages\OpenCover.4.7.922\tools\OpenCover.Console.exe"
+    TEST_CATEGORY: $(TestCategory)
+
+- powershell: |
+   # ---------------------------------------------------
+   #  テスト実行結果のメッセージを構築します
+   # ---------------------------------------------------
+   function CreateTestResultMessage($file) {
+       $filename = $file.name
+       $xml = [XML](Get-Content $file)
+   
+       $start = $xml.TestRun.Times.start
+       $finish = $xml.TestRun.Times.finish
+       $executed = $xml.TestRun.ResultSummary.Counters.executed
+       $passed = $xml.TestRun.ResultSummary.Counters.passed
+       $failed = $xml.TestRun.ResultSummary.Counters.failed
+       
+       return "テスト[" + $filename + "]の実行結果だよー" +  `
+       "`n" + "> 開始時刻: " + ([DateTime]$start).ToString("yyyy/MM/dd HH:mm:ss") + `
+       "`n" + "> 終了時刻: " + ([DateTime]$finish).ToString("yyyy/MM/dd HH:mm:ss") + `
+       "`n" + "> 実行件数: " + $executed + `
+       "`n" + "> 成功件数: " + $passed + `
+       "`n" + "> 失敗件数: " + $failed
+   }
+   
+   # ---------------------------------------------------
+   #  カバレッジ取得結果のメッセージを構築します
+   # ---------------------------------------------------
+   function CreateCoverageMessage($file) {
+       $filename = $file.name
+       $xml = [XML](Get-Content $file)
+   
+       $sequenceCoverage = $XML.CoverageSession.Summary.sequenceCoverage
+       $branchCoverage = $XML.CoverageSession.Summary.branchCoverage
+       $numSequencePoints = $XML.CoverageSession.Summary.numSequencePoints
+       $visitedSequencePoints = $XML.CoverageSession.Summary.visitedSequencePoints
+       $numBranchPoints = $XML.CoverageSession.Summary.numBranchPoints
+       $visitedBranchPoints = $XML.CoverageSession.Summary.visitedBranchPoints
+   
+       return "テストカバレッジ[" + $filename + "]の実行結果だよー" +  `
+       "`n" + "> Sequence Coverage: " + $sequenceCoverage + "% " + "(" + $visitedSequencePoints + "/" + $numSequencePoints + ")" + `
+       "`n" + "> Branch Coverage: " + $branchCoverage + "% " + "(" + $visitedBranchPoints + "/" + $numBranchPoints + ")"
+   }
+   
+   # ---------------------------------------------------
+   #  Slackへ通知します
+   # ---------------------------------------------------
+   function PostSlack($message) {
+       $encode = [System.Text.Encoding]::GetEncoding('ISO-8859-1')
+       $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($message)
+   
+       $notificationPayload = @{ 
+           text = $encode.GetString($utf8Bytes);
+           username = "Azure DevOps Test Report"; 
+           icon_url = "xxx"
+       }
+   
+       $postUri = "xxx" # Incoming WebhooksのエンドポイントURLを設定します
+       Invoke-RestMethod -Method POST -Uri $postUri -Body  (ConvertTo-Json $notificationPayload) -ContentType application/json
+   }
+   
+   # テスト実行結果の送信
+   $files = Get-ChildItem -Recurse -File -Include *.trx
+   Foreach ($file in $files) {
+       $message = CreateTestResultMessage($file)
+       PostSlack($message)
+   }
+   
+   # カバレッジ取得結果の送信
+   $files = Get-ChildItem -Recurse -File -Include coverage.xml
+   Foreach ($file in $files) {
+       $message = CreateCoverageMessage($file)
+       PostSlack($message)
+   }
+   
+  displayName: 'Send test result to Slack'
 
 - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
   displayName: 'Generate coverage report'
@@ -50,6 +127,7 @@ steps:
   inputs:
     testResultsFormat: VSTest
     testResultsFiles: '**/*.trx'
+    testRunTitle: '$(Build.DefinitionName)_$(Build.BuildNumber)_$(Build.BuildId)_$(TestCategory)'
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish artifacts'
