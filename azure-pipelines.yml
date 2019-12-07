@@ -29,9 +29,9 @@ steps:
   displayName: 'Test and output coverage'
   env:
     MSTEST_PATH: "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-    TARGET_DIR: ".\DoteNetOwinWebApiSample.Api.Test\bin\Debug"
-    TARGET_FILE_AND_ARGS: "DoteNetOwinWebApiSample.Api.Test.dll /Logger:trx"
-    FILTER: "+[*]*  -[DoteNetOwinWebApiSample.Api.Test]*"
+    TARGET_DIR: ".\DotNetOwinWebApiSample.Api.Test\bin\Debug"
+    TARGET_FILE_AND_ARGS: "DotNetOwinWebApiSample.Api.Test.dll /Logger:trx"
+    FILTER: "+[DotNetOwinWebApiSample*]* -[*.Test.*]*"
     OUTPUT_FILE: "coverage.xml"
     OPEN_COVER_PATH: ".\packages\OpenCover.4.7.922\tools\OpenCover.Console.exe"
 

@@ -2,7 +2,7 @@
 using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DoteNetOwinWebApiSample.Api.Test.Services
+namespace DotNetOwinWebApiSample.Api.Test.Services
 {
     [TestClass]
     [TestCategory("Logic"), TestCategory("Greeting")]

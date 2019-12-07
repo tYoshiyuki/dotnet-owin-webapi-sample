@@ -8,7 +8,7 @@ using DotNetOwinWebApiSample.Api.Models;
 using Microsoft.Owin.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace DoteNetOwinWebApiSample.Api.Test.Controllers
+namespace DotNetOwinWebApiSample.Api.Test.Controllers
 {
     [TestClass]
     [TestCategory("Todo"), TestCategory("Integration")]

@@ -13,7 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Owin;
 
-namespace DoteNetOwinWebApiSample.Api.Test.Middlewares
+namespace DotNetOwinWebApiSample.Api.Test.Middlewares
 {
     [TestClass]
     public class ErrorHandlingMiddlewareTest

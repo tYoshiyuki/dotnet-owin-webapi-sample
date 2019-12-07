@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29411.108
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetOwinWebApiSample.Api", "DotNetOwinWebApiSample.Api\DotNetOwinWebApiSample.Api.csproj", "{A37E7C34-EAA5-40B4-8644-5EDE1527FC28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoteNetOwinWebApiSample.Api.Test", "DoteNetOwinWebApiSample.Api.Test\DoteNetOwinWebApiSample.Api.Test.csproj", "{5A31DDF8-F9DF-4AAA-862B-EF911C67F98E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DotNetOwinWebApiSample.Api.Test", "DotNetOwinWebApiSample.Api.Test\DotNetOwinWebApiSample.Api.Test.csproj", "{5A31DDF8-F9DF-4AAA-862B-EF911C67F98E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{39084198-B3CD-4085-85EA-20FA11AA3FF7}"
 	ProjectSection(SolutionItems) = preProject

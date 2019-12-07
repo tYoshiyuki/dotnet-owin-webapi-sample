@@ -1,11 +1,11 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("DoteNetOwinWebApiSample.Api.Test")]
+[assembly: AssemblyTitle("DotNetOwinWebApiSample.Api.Test")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("DoteNetOwinWebApiSample.Api.Test")]
+[assembly: AssemblyProduct("DotNetOwinWebApiSample.Api.Test")]
 [assembly: AssemblyCopyright("Copyright ©  2019")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
