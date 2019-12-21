@@ -1,5 +1,4 @@
-﻿using System;
-using DotNetOwinWebApiSample.Api.Services;
+﻿using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotNetOwinWebApiSample.Api.Test.Services

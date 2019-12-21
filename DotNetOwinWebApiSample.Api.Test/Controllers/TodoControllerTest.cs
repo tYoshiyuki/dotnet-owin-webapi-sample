@@ -3,26 +3,28 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using DotNetOwinWebApiSample.Api;
 using DotNetOwinWebApiSample.Api.Models;
-using Microsoft.Owin.Testing;
+using DotNetOwinWebApiSample.Api.Test.Shared;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DotNetOwinWebApiSample.Api.Test.Controllers
 {
     [TestClass]
     [TestCategory("Todo"), TestCategory("Integration")]
-    public class TodoControllerTest
+    public class TodoControllerTest : IntegrationTestBase
     {
         private readonly string _url = "http://localhost/api/todo";
-        private static TestServer Server { get; set; }
-        private static HttpClient HttpClient { get; set; }
 
         [ClassInitialize]
         public static void Setup(TestContext context)
         {
-            Server = TestServer.Create<Startup>();
-            HttpClient = Server.HttpClient;
+            Before();
+        }
+
+        [ClassCleanup]
+        public static void TearDown()
+        {
+            After();
         }
 
         [TestMethod]
@@ -37,10 +39,18 @@ namespace DotNetOwinWebApiSample.Api.Test.Controllers
             Assert.IsTrue(result.Any());
         }
 
-        [ClassCleanup]
-        public static void Dispose()
+        [TestMethod]
+        public async Task Get_by_id_正常系()
         {
-            Server.Dispose();
+            // Arrange・Act
+            var expected = 1;
+            var response = await HttpClient.GetAsync(_url + $"/{expected}");
+
+            // Assert
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            var result = await response.Content.ReadAsAsync<Todo>();
+            Assert.IsNotNull(result);
+            Assert.AreEqual(expected, result.Id);
         }
     }
 }
