@@ -33,6 +33,7 @@ namespace DotNetOwinWebApiSample.Api.Test.Services
         }
 
         [TestMethod]
+        [Ignore]
         public void Get_正常系()
         {
             // Arrange
@@ -63,6 +64,7 @@ namespace DotNetOwinWebApiSample.Api.Test.Services
             var result = _service.Get(id);
 
             // Assert
+            throw new Exception();
             Assert.AreEqual(_data.Find(_ => _.Id == id), result);
         }
 
