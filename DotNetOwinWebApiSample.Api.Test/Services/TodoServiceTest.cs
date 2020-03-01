@@ -63,7 +63,7 @@ namespace DotNetOwinWebApiSample.Api.Test.Services
             var result = _service.Get(id);
 
             // Assert
-            throw new Exception();
+            Assert.AreEqual(_data.Find(_ => _.Id == id), result);
         }
 
         [TestMethod]
