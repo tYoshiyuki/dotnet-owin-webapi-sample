@@ -1,16 +1,18 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Net.Http;
 using System.Web.Http;
+using System.Web.Http.Controllers;
+using System.Web.Http.Dispatcher;
 using System.Web.Http.ExceptionHandling;
 using DotNetOwinWebApiSample.Api;
 using DotNetOwinWebApiSample.Api.ExceptionHandler;
+using DotNetOwinWebApiSample.Api.Extensions;
 using DotNetOwinWebApiSample.Api.Middlewares;
 using DotNetOwinWebApiSample.Api.Models;
 using DotNetOwinWebApiSample.Api.Repositories;
 using DotNetOwinWebApiSample.Api.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Owin;
-using Ninject;
-using Ninject.Web.Common.OwinHost;
-using Ninject.Web.WebApi.OwinHost;
 using Owin;
 
 [assembly: OwinStartup(typeof(Startup))]
@@ -30,21 +32,41 @@ namespace DotNetOwinWebApiSample.Api
             SwaggerConfig.Register(configuration);
 
             app.Use<ErrorHandlingMiddleware>();
-            app.UseNinjectMiddleware(CreateKernel);
-            app.UseNinjectWebApi(configuration);
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+
+            var provider = services.BuildServiceProvider();
+            configuration.Services.Replace(typeof(IHttpControllerActivator), new ServiceProviderControllerActivator(provider));
+
+            app.UseWebApi(configuration);
         }
 
-        /// <summary>
-        /// DIの設定を行います
-        /// </summary>
-        /// <returns>StandardKernel</returns>
-        private static StandardKernel CreateKernel()
+        public void ConfigureServices(IServiceCollection services)
         {
-            var kernel = new StandardKernel();
-            kernel.Bind<TodoService>().ToSelf().InSingletonScope();
-            kernel.Bind<IRepository<Todo>>().To<TodoRepository>().InSingletonScope();
-            kernel.Load(Assembly.GetExecutingAssembly());
-            return kernel;
+            services.AddTransient<TodoService>();
+            services.AddTransient<GreetingService>();
+            services.AddTransient<IRepository<Todo>, TodoRepository>();
+            services.AddControllersAsServices();
+        }
+    }
+
+    public class ServiceProviderControllerActivator : IHttpControllerActivator
+    {
+        private readonly IServiceProvider _provider;
+
+        public ServiceProviderControllerActivator(IServiceProvider provider)
+        {
+            _provider = provider;
+        }
+
+        public IHttpController Create(HttpRequestMessage request, HttpControllerDescriptor controllerDescriptor, Type controllerType)
+        {
+            var scopeFactory = _provider.GetRequiredService<IServiceScopeFactory>();
+            var scope = scopeFactory.CreateScope();
+            request.RegisterForDispose(scope);
+
+            return scope.ServiceProvider.GetService(controllerType) as IHttpController;
         }
     }
 }
