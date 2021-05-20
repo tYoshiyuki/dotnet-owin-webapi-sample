@@ -11,6 +11,7 @@ using DotNetOwinWebApiSample.Api.Repositories;
 using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Owin;
+using NSwag.AspNet.Owin;
 using Owin;
 
 [assembly: OwinStartup(typeof(Startup))]
@@ -35,6 +36,8 @@ namespace DotNetOwinWebApiSample.Api
 
             var provider = services.BuildServiceProvider();
             configuration.Services.Replace(typeof(IHttpControllerActivator), new ServiceProviderControllerActivator(provider));
+
+            app.UseSwaggerUi3(typeof(Startup).Assembly, settings => { });
 
             app.UseWebApi(configuration);
         }
