@@ -1,0 +1,12 @@
+{
+  "runtime": "WinX64",
+  "documentGenerator": {
+    "webApiToOpenApi": {
+      "assemblyPaths": [
+        "DotNetOwinWebApiSample.Api/bin/DotNetOwinWebApiSample.Api.dll"
+      ],
+      "output": "DotNetOwinWebApiSample.Api.json",
+      "outputType": "OpenApi3"
+    }
+  }
+}
