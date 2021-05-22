@@ -27,8 +27,6 @@ namespace DotNetOwinWebApiSample.Api
             // ErrorHandlingMiddlewareで例外処理を行うため、既定の例外制御を抑止します
             configuration.Services.Replace(typeof(IExceptionHandler), new PassthroughExceptionHandler());
 
-            SwaggerConfig.Register(configuration);
-
             app.Use<ErrorHandlingMiddleware>();
 
             var services = new ServiceCollection();
