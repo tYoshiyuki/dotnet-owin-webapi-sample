@@ -6,4 +6,4 @@ Owin と  ASP.NET Web API で Web API を作成するサンプル
 - Owin
 - Microsoft DependencyInjection
 - MsTest
-- Swashbuckle
+- NSwag
