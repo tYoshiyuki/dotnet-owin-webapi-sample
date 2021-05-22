@@ -37,7 +37,15 @@ namespace DotNetOwinWebApiSample.Api
             var provider = services.BuildServiceProvider();
             configuration.Services.Replace(typeof(IHttpControllerActivator), new ServiceProviderControllerActivator(provider));
 
-            app.UseSwaggerUi3(typeof(Startup).Assembly, settings => { });
+            app.UseSwaggerUi3(typeof(Startup).Assembly, settings =>
+            {
+                settings.Path = "/swagger";
+            });
+
+            app.UseSwaggerReDoc(typeof(Startup).Assembly, settings =>
+            {
+                settings.Path = "/redoc";
+            });
 
             app.UseWebApi(configuration);
         }
