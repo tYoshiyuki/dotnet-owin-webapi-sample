@@ -11,6 +11,7 @@ using DotNetOwinWebApiSample.Api.Repositories;
 using DotNetOwinWebApiSample.Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Owin;
+using Microsoft.Owin.Cors;
 using NSwag.AspNet.Owin;
 using Owin;
 
@@ -45,6 +46,7 @@ namespace DotNetOwinWebApiSample.Api
                 settings.Path = "/redoc";
             });
 
+            app.UseCors(CorsOptions.AllowAll);
             app.UseWebApi(configuration);
         }
 
