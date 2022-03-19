@@ -1,4 +1,6 @@
-﻿using System.Web.Http;
+﻿using System.Linq;
+using System.Web.Http;
+using DotNetOwinWebApiSample.Api.Models;
 using DotNetOwinWebApiSample.Api.Services;
 
 namespace DotNetOwinWebApiSample.Api.Controllers
@@ -30,18 +32,18 @@ namespace DotNetOwinWebApiSample.Api.Controllers
 
         [HttpPost]
         [Route]
-        public IHttpActionResult Post(int id, string description)
+        public IHttpActionResult Post([FromBody] ToDoPostRequest todo)
         {
-            _service.Update(id, description);
-            var target = _service.Get(id);
+            _service.Update(todo.Id, todo.Description);
+            var target = _service.Get(todo.Id);
             return Ok(target);
         }
 
         [HttpPut]
         [Route]
-        public IHttpActionResult Put(string description)
+        public IHttpActionResult Put([FromBody] ToDoPutRequest todo)
         {
-            var target = _service.Add(description);
+            var target = _service.Add(todo.Description);
             return Ok(target);
         }
 

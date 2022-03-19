@@ -9,6 +9,7 @@ namespace DotNetOwinWebApiSample.Api.Repositories
     {
         private static List<Todo> _todoList = new List<Todo>
         {
+            new Todo {Id = 0, Description = "Sample000", CreatedDate = DateTime.Now},
             new Todo {Id = 1, Description = "Sample001", CreatedDate = DateTime.Now},
             new Todo {Id = 2, Description = "Sample002", CreatedDate = DateTime.Now},
             new Todo {Id = 3, Description = "Sample003", CreatedDate = DateTime.Now}
