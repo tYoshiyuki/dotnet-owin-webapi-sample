@@ -44,7 +44,7 @@ namespace DotNetOwinWebApiSample.Api.Test.Services
             var result = _service.Get().ToList();
 
             // Assert
-            Assert.AreEqual(4, result.Count);
+            Assert.AreEqual(3, result.Count);
             CollectionAssert.AreEqual(_data, result);
         }
 
@@ -105,7 +105,7 @@ namespace DotNetOwinWebApiSample.Api.Test.Services
         {
             yield return new object[] { new Todo { Id = 1, Description = "Test 991", CreatedDate = DateTime.Now } };
             yield return new object[] { new Todo { Id = 2, Description = "Test 992", CreatedDate = DateTime.Now } };
-            yield return new object[] { new Todo { Id = 3, Description = "Test 993", CreatedDate = DateTime.Now } };
+            yield return new object[] { new Todo { Id = 3, Description = null, CreatedDate = DateTime.Now } };
         }
     }
 }
