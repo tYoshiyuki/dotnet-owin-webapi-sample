@@ -106,27 +106,20 @@ jobs:
       continue-on-error: true
       shell: pwsh
       run: |
-        $testProject = "${{ env.TEST_PROJECT_NUNIT }}"
-        if (-not (Test-Path $testProject)) {
-          Write-Warning "Test project not found: $testProject"
+        $testAssembly = "DotNetOwinWebApiSample.Api.NUnit.Test\bin\${{ env.BUILD_CONFIGURATION }}\net48\DotNetOwinWebApiSample.Api.NUnit.Test.dll"
+        $vstest = "${{ steps.find_vstest.outputs.path }}"
+        
+        if (-not (Test-Path $testAssembly)) {
+          Write-Warning "NUnit test assembly not found: $testAssembly"
           exit 0
         }
         
-        # Build NUnit project only (without building dependencies)
-        dotnet build $testProject `
-          --configuration ${{ env.BUILD_CONFIGURATION }} `
-          --no-restore `
-          --no-dependencies
-        
-        if ($LASTEXITCODE -eq 0) {
-          # Run tests with --no-build to avoid rebuilding dependencies
-          dotnet test $testProject `
-            --configuration ${{ env.BUILD_CONFIGURATION }} `
-            --logger "trx;LogFileName=NUnitTestResults.trx" `
-            --logger "console;verbosity=normal" `
-            --no-build `
-            --no-restore
+        if (-not (Test-Path $vstest)) {
+          Write-Warning "VSTest.Console.exe not found: $vstest"
+          exit 0
         }
+        
+        & $vstest $testAssembly /Logger:trx;LogFileName=NUnitTestResults.trx /Logger:console
         
         if ($LASTEXITCODE -ne 0) {
           Write-Warning "NUnit tests failed with exit code $LASTEXITCODE"
