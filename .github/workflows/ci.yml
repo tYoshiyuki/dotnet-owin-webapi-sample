@@ -37,6 +37,9 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1.1.0
 
+    - name: Setup VSTest.console.exe
+      uses: darenm/Setup-VSTest@v1.3
+
     - name: Restore NuGet packages
       shell: pwsh
       run: |
