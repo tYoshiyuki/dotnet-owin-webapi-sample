@@ -10,8 +10,6 @@ on:
 env:
   SOLUTION_FILE: DotNetOwinWebApiSample.sln
   BUILD_CONFIGURATION: Release
-  TEST_PROJECT_MSTEST: DotNetOwinWebApiSample.Api.Test/DotNetOwinWebApiSample.Api.Test.csproj
-  TEST_PROJECT_NUNIT: DotNetOwinWebApiSample.Api.NUnit.Test/DotNetOwinWebApiSample.Api.NUnit.Test.csproj
   COVERAGE_FILTER: "+[DotNetOwinWebApiSample*]* -[*.Test.*]*"
   COVERAGE_OUTPUT: coverage.xml
   COVERAGE_REPORT_DIR: coverage-report
@@ -39,15 +37,6 @@ jobs:
 
     - name: Setup VSTest.console.exe
       uses: darenm/Setup-VSTest@v1.3
-
-    - name: Restore NuGet packages
-      shell: pwsh
-      run: |
-        nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages -NonInteractive
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
-          exit $LASTEXITCODE
-        }
 
     - name: Build solution
       shell: pwsh
