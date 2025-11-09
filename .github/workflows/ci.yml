@@ -38,6 +38,15 @@ jobs:
     - name: Setup VSTest.console.exe
       uses: darenm/Setup-VSTest@v1.3
 
+    - name: Restore NuGet packages
+      shell: pwsh
+      run: |
+        nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages -NonInteractive
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+
     - name: Build solution
       shell: pwsh
       run: |
