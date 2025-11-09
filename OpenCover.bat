@@ -1,36 +1,36 @@
 @echo off
 rem OpenCover.bat
-rem ƒ\ƒŠƒ…[ƒVƒ‡ƒ“ƒ‹[ƒg‚ÅÀs‚·‚é‚±‚Æ
+rem ã‚³ãƒ¼ãƒ‰ã‚«ãƒãƒ¬ãƒƒã‚¸ã‚’æ¸¬å®šã—ã¦å®Ÿè¡Œã™ã‚‹
 
-rem MSTEST ‚ÌƒCƒ“ƒXƒg[ƒ‹æ
-set MSTEST="C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+rem MSTEST ã®å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«
+set MSTEST=C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe
 
-rem OpenCover ‚ÌƒCƒ“ƒXƒg[ƒ‹æ
-set OPENCOVER=".\packages\OpenCover.4.7.922\tools\OpenCover.Console.exe"
+rem OpenCover ã®å®Ÿè¡Œãƒ•ã‚¡ã‚¤ãƒ«
+set OPENCOVER=.\packages\OpenCover.4.7.1221\tools\OpenCover.Console.exe
 
-rem Às‚·‚éƒeƒXƒg‚ÌƒAƒZƒ“ƒuƒŠ
-set TARGET_TEST="DotNetOwinWebApiSample.Api.Test.dll /Logger:trx"
-rem set TEST_CATEGORY="/TestCaseFilter:TestCategory=Logic"
-set TEST_CATEGORY=""
-if not TEST_CATEGORY=="" set TEST_CATEGORY="/TestCaseFilter:TestCategory=%TARGET_TEST_CATEGORY%"
+rem å®Ÿè¡Œã™ã‚‹ãƒ†ã‚¹ãƒˆã®ã‚¢ã‚»ãƒ³ãƒ–ãƒªå
+set TARGET_TEST=DotNetOwinWebApiSample.Api.Test.dll /Logger:trx
+rem set TEST_CATEGORY=/TestCaseFilter:TestCategory=Logic
+set TEST_CATEGORY=
+if not "%TEST_CATEGORY%"=="" set TARGET_TEST=%TARGET_TEST% %TEST_CATEGORY%
 
+rem å®Ÿè¡Œã™ã‚‹ãƒ†ã‚¹ãƒˆã®ã‚¢ã‚»ãƒ³ãƒ–ãƒªåã®è¿½åŠ 
+set TARGET_DIR=DotNetOwinWebApiSample.Api.Test\bin\Debug
 
-rem e2e‚ÌƒeƒXƒg‚¾‚¯À{‚·‚éê‡
-rem set TARGET_TEST="DotNetOwinWebApiSample.Api.Test.dll /Logger:trx;LogFileName=DotNetOwinWebApiSample.Api.Test.trx"
+rem OpenCover ã®å‡ºåŠ›ãƒ•ã‚¡ã‚¤ãƒ«
+set OUTPUT=coverage.xml
 
-rem Às‚·‚éƒeƒXƒg‚ÌƒAƒZƒ“ƒuƒŠ‚ÌŠi”[æ
-set TARGET_DIR=".\DotNetOwinWebApiSample.Api.Test\bin\Debug"
+rem ã‚«ãƒãƒ¬ãƒƒã‚¸å¯¾è±¡ã®æŒ‡å®š
+rem set FILTERS=+[OpenCoverSample]*
+rem set FILTERS=+[DotNetOwinWebApiSample.*]* -[*.Test.*]*
+set FILTERS=+[DotNetOwinWebApiSample*]* -[Test*]*
 
-rem OpenCover ‚Ìo—Íƒtƒ@ƒCƒ‹
-set OUTPUT="coverage.xml"
+rem OpenCover ã®å®Ÿè¡Œ
+"%OPENCOVER%" -register:user -target:"%MSTEST%" -targetargs:"%TARGET_TEST%" -filter:"%FILTERS%" -output:"%OUTPUT%" -targetdir:"%TARGET_DIR%"
 
-rem ƒJƒoƒŒƒbƒWŒv‘ª‘ÎÛ‚Ìw’è
-rem set FILTERS="+[OpenCoverSample]*"
-rem set FILTERS="+[DotNetOwinWebApiSample.*]* -[*.Test.*]*"
-set FILTERS="+[DotNetOwinWebApiSample*]* -[Test*]*"
+rem ãƒ¬ãƒãƒ¼ãƒˆç”Ÿæˆ
+.\packages\ReportGenerator.5.1.10\tools\net47\ReportGenerator.exe -reports:%OUTPUT% -targetdir:report
 
-rem OpenCover ‚ÌÀs
-%OPENCOVER% -register:user -target:%MSTEST% -targetargs:%TARGET_TEST% -targetargs:%TARGET_TEST_CATEGORY% -targetdir:%TARGET_DIR% -filter:%FILTERS% -output:%OUTPUT%
-
-.\packages\ReportGenerator.4.3.6\tools\net47\ReportGenerator.exe -reports:%OUTPUT% -targetdir:.\report
+echo.
+echo ã‚«ãƒãƒ¬ãƒƒã‚¸ãƒ¬ãƒãƒ¼ãƒˆãŒç”Ÿæˆã•ã‚Œã¾ã—ãŸ: report\index.html
 pause
