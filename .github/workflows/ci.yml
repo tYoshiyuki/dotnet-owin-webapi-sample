@@ -100,15 +100,31 @@ jobs:
           exit 1
         }
         
-        $targetArgs = "`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx"
-        & $openCover `
-          -register:user `
-          -target:"vstest.console.exe" `
-          -targetargs:$targetArgs `
-          -filter:"${{ env.COVERAGE_FILTER }}" `
-          -output:"${{ env.COVERAGE_OUTPUT }}" `
-          -targetdir:"$targetDir" `
-          -returntargetcode
+        # Get absolute paths
+        $workspaceRoot = (Resolve-Path ".").Path
+        $targetDirPath = (Resolve-Path $targetDir).Path
+        $openCoverPath = (Resolve-Path $openCover).Path
+        $outputPath = Join-Path $workspaceRoot "${{ env.COVERAGE_OUTPUT }}"
+        
+        # Use just the filename for targetargs (like OpenCover.bat)
+        $testAssemblyFileName = "DotNetOwinWebApiSample.Api.Test.dll"
+        $targetArgs = "$testAssemblyFileName /Logger:trx;LogFileName=MSTestResults.trx"
+        
+        # Change to target directory before running OpenCover (like OpenCover.bat)
+        Push-Location $targetDirPath
+        
+        try {
+          & $openCoverPath `
+            -register:user `
+            -target:"vstest.console.exe" `
+            -targetargs:$targetArgs `
+            -filter:"${{ env.COVERAGE_FILTER }}" `
+            -output:"$outputPath" `
+            -targetdir:"$targetDirPath" `
+            -returntargetcode
+        } finally {
+          Pop-Location
+        }
         
         if ($LASTEXITCODE -ne 0) {
           Write-Warning "Tests may have failed (exit code: $LASTEXITCODE)"
