@@ -48,7 +48,7 @@ namespace DotNetOwinWebApiSample.Api.Controllers
         }
 
         [HttpDelete]
-        [Route]
+        [Route("{id:int}")]
         public IHttpActionResult Delete(int id)
         {
             _service.Remove(id);
