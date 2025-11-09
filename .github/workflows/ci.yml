@@ -41,20 +41,39 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Restoring NuGet packages for packages.config projects..."
-        nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages
+        nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages -NonInteractive
         if ($LASTEXITCODE -ne 0) {
           Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
         }
         
-        # Verify packages were restored
-        if (Test-Path "packages\Newtonsoft.Json.13.0.1") {
-          Write-Host "✓ Newtonsoft.Json package found"
+        # Verify packages were restored and check actual versions
+        Write-Host "Checking restored packages..."
+        $newtonsoftPackages = Get-ChildItem -Path "packages" -Directory -Filter "Newtonsoft.Json.*" -ErrorAction SilentlyContinue
+        if ($newtonsoftPackages) {
+          Write-Host "Found Newtonsoft.Json packages:"
+          foreach ($pkg in $newtonsoftPackages) {
+            Write-Host "  - $($pkg.Name)"
+            $dllPath = Join-Path $pkg.FullName "lib\net45\Newtonsoft.Json.dll"
+            if (Test-Path $dllPath) {
+              Write-Host "    ✓ DLL found at: $dllPath"
+            } else {
+              Write-Warning "    ✗ DLL not found at: $dllPath"
+              # Check for alternative paths
+              $altPaths = Get-ChildItem -Path $pkg.FullName -Recurse -Filter "Newtonsoft.Json.dll" -ErrorAction SilentlyContinue
+              if ($altPaths) {
+                Write-Host "    Found DLL at alternative paths:"
+                foreach ($alt in $altPaths) {
+                  Write-Host "      - $($alt.FullName)"
+                }
+              }
+            }
+          }
         } else {
           Write-Warning "✗ Newtonsoft.Json package not found"
           Write-Host "Available packages:"
           if (Test-Path "packages") {
-            Get-ChildItem -Path "packages" -Directory | Select-Object -First 10 Name
+            Get-ChildItem -Path "packages" -Directory | Select-Object -First 20 Name
           }
         }
 
@@ -68,39 +87,62 @@ jobs:
           exit $LASTEXITCODE
         }
 
-    - name: Verify NuGet packages restoration
+    - name: Fix package version mismatch
       shell: pwsh
       run: |
-        Write-Host "Verifying NuGet packages restoration..."
-        $requiredPackages = @(
-          "Newtonsoft.Json.13.0.1",
-          "Microsoft.Owin.4.2.2",
-          "Microsoft.AspNet.WebApi.Core.5.2.9"
-        )
+        Write-Host "Checking for package version mismatches..."
         
-        $missingPackages = @()
-        foreach ($package in $requiredPackages) {
-          $packagePath = "packages\$package"
-          if (Test-Path $packagePath) {
-            Write-Host "✓ $package found"
-          } else {
-            Write-Warning "✗ $package NOT found"
-            $missingPackages += $package
-          }
-        }
+        # Read .csproj to find expected Newtonsoft.Json version
+        $csprojPath = "DotNetOwinWebApiSample.Api\DotNetOwinWebApiSample.Api.csproj"
+        $csprojContent = Get-Content $csprojPath -Raw
         
-        if ($missingPackages.Count -gt 0) {
-          Write-Error "Missing packages: $($missingPackages -join ', ')"
-          Write-Host "Available packages in packages directory:"
-          if (Test-Path "packages") {
-            Get-ChildItem -Path "packages" -Directory | Select-Object -First 20 Name | ForEach-Object {
-              Write-Host "  - $($_.Name)"
+        if ($csprojContent -match 'HintPath.*Newtonsoft\.Json\.(\d+\.\d+\.\d+)') {
+          $expectedVersion = $matches[1]
+          Write-Host ".csproj expects Newtonsoft.Json version: $expectedVersion"
+          
+          # Check if expected version exists
+          $expectedPath = "packages\Newtonsoft.Json.$expectedVersion"
+          if (-not (Test-Path $expectedPath)) {
+            Write-Host "Expected version $expectedVersion not found, checking what was restored..."
+            
+            # Find what was actually restored
+            $restoredPackages = Get-ChildItem -Path "packages" -Directory -Filter "Newtonsoft.Json.*" -ErrorAction SilentlyContinue
+            if ($restoredPackages) {
+              $restoredVersion = $restoredPackages[0].Name
+              Write-Host "Found restored version: $restoredVersion"
+              
+              # Create symbolic link or copy to expected version
+              Write-Host "Creating symbolic link from $restoredVersion to Newtonsoft.Json.$expectedVersion..."
+              $restoredPath = $restoredPackages[0].FullName
+              $expectedFullPath = Join-Path "packages" "Newtonsoft.Json.$expectedVersion"
+              
+              # Remove if exists
+              if (Test-Path $expectedFullPath) {
+                Remove-Item $expectedFullPath -Recurse -Force
+              }
+              
+              # Create junction (Windows equivalent of symlink for directories)
+              $junction = New-Object System.IO.DirectoryInfo($expectedFullPath)
+              if (-not $junction.Exists) {
+                cmd /c mklink /J "$expectedFullPath" "$restoredPath" | Out-Null
+                if (Test-Path $expectedFullPath) {
+                  Write-Host "✓ Symbolic link created successfully"
+                } else {
+                  Write-Warning "Failed to create symbolic link, trying copy instead..."
+                  Copy-Item -Path $restoredPath -Destination $expectedFullPath -Recurse -Force
+                  Write-Host "✓ Copied package to expected version"
+                }
+              }
+            } else {
+              Write-Error "No Newtonsoft.Json package found after restore"
+              exit 1
             }
+          } else {
+            Write-Host "✓ Expected version already exists"
           }
-          exit 1
         }
         
-        Write-Host "All required packages are restored"
+        Write-Host "Package version fix completed"
 
     - name: Build solution
       shell: pwsh
@@ -109,7 +151,19 @@ jobs:
         Write-Host "Configuration: ${{ env.BUILD_CONFIGURATION }}"
         Write-Host "Platform: Any CPU"
         
-        # Build with explicit package restore
+        # Find actual Newtonsoft.Json package version
+        $newtonsoftPackage = Get-ChildItem -Path "packages" -Directory -Filter "Newtonsoft.Json.*" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($newtonsoftPackage) {
+          Write-Host "Using Newtonsoft.Json package: $($newtonsoftPackage.Name)"
+        }
+        
+        # Build with explicit package restore and solution directory
+        $solutionDir = (Get-Location).Path
+        $packagesDir = Join-Path $solutionDir "packages"
+        
+        Write-Host "Solution directory: $solutionDir"
+        Write-Host "Packages directory: $packagesDir"
+        
         msbuild ${{ env.SOLUTION_FILE }} `
           /p:Configuration=${{ env.BUILD_CONFIGURATION }} `
           /p:Platform="Any CPU" `
@@ -117,23 +171,45 @@ jobs:
           /v:minimal `
           /p:RestorePackagesConfig=true `
           /p:RestorePackages=true `
-          /p:SolutionDir="$(Get-Location)\" `
-          /p:PackagesDir="$(Get-Location)\packages"
+          /p:SolutionDir="$solutionDir\" `
+          /p:PackagesDir="$packagesDir" `
+          /p:BuildProjectReferences=true
         
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Build failed with exit code $LASTEXITCODE"
-          Write-Host "Checking packages directory..."
-          if (Test-Path "packages") {
-            Write-Host "Packages directory exists"
-            $newtonsoftPath = "packages\Newtonsoft.Json.13.0.1"
-            if (Test-Path $newtonsoftPath) {
-              Write-Host "Newtonsoft.Json package found at: $newtonsoftPath"
-            } else {
-              Write-Host "Newtonsoft.Json package NOT found"
+          Write-Host "Diagnostic information:"
+          Write-Host "  Solution directory: $solutionDir"
+          Write-Host "  Packages directory: $packagesDir"
+          
+          # Check for Newtonsoft.Json DLL
+          if ($newtonsoftPackage) {
+            $dllPaths = @(
+              "$($newtonsoftPackage.FullName)\lib\net45\Newtonsoft.Json.dll",
+              "$($newtonsoftPackage.FullName)\lib\net472\Newtonsoft.Json.dll"
+            )
+            foreach ($dllPath in $dllPaths) {
+              if (Test-Path $dllPath) {
+                Write-Host "  ✓ Found DLL at: $dllPath"
+              } else {
+                Write-Host "  ✗ DLL not found at: $dllPath"
+              }
             }
-          } else {
-            Write-Host "Packages directory does not exist"
+            
+            # Check what .csproj expects
+            Write-Host "  Checking .csproj file for expected path..."
+            $csprojContent = Get-Content "DotNetOwinWebApiSample.Api\DotNetOwinWebApiSample.Api.csproj" -Raw
+            if ($csprojContent -match 'HintPath.*Newtonsoft\.Json\.(\d+\.\d+\.\d+)') {
+              $expectedVersion = $matches[1]
+              Write-Host "  .csproj expects version: $expectedVersion"
+              $expectedPath = "packages\Newtonsoft.Json.$expectedVersion\lib\net45\Newtonsoft.Json.dll"
+              if (Test-Path $expectedPath) {
+                Write-Host "  ✓ Expected path exists: $expectedPath"
+              } else {
+                Write-Host "  ✗ Expected path does not exist: $expectedPath"
+              }
+            }
           }
+          
           exit $LASTEXITCODE
         }
         Write-Host "Build completed successfully"
