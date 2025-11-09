@@ -100,5 +100,119 @@ namespace DotNetOwinWebApiSample.Api.NUnit.Test.Services
             yield return new object[] { new Todo { Id = 2, Description = "Test 992", CreatedDate = DateTime.Now } };
             yield return new object[] { new Todo { Id = 3, Description = "Test 993", CreatedDate = DateTime.Now } };
         }
+
+        [Test]
+        public void Add_正常系()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+            var description = "New Todo Item";
+
+            // Act
+            var result = _service.Add(description);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(5, result.Id); // Max ID + 1
+            Assert.AreEqual(description, result.Description);
+            _mock.Verify(_ => _.Add(It.IsAny<Todo>()), Times.Once);
+        }
+
+        [Test]
+        public void Add_descriptionがnull_ApiBadRequestExceptionが発生()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act・Assert
+            Assert.That(() => _service.Add(null), Throws.TypeOf<ApiBadRequestException>());
+        }
+
+        [Test]
+        public void Update_正常系()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+            var id = 1;
+            var description = "Updated Description";
+
+            // Act
+            _service.Update(id, description);
+
+            // Assert
+            var result = _service.Get(id);
+            Assert.AreEqual(description, result.Description);
+            _mock.Verify(_ => _.Update(It.IsAny<Todo>()), Times.Once);
+        }
+
+        [Test]
+        public void Update_存在しないID_ApiNotFoundExceptionが発生()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act・Assert
+            Assert.That(() => _service.Update(999, "Description"), Throws.TypeOf<ApiNotFoundException>());
+        }
+
+        [Test]
+        public void Update_descriptionがnull_ApiBadRequestExceptionが発生()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act・Assert
+            Assert.That(() => _service.Update(1, null), Throws.TypeOf<ApiBadRequestException>());
+        }
+
+        [Test]
+        public void Update_todoがnull_ApiBadRequestExceptionが発生()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act・Assert
+            Assert.That(() => _service.Update(null), Throws.TypeOf<ApiBadRequestException>());
+        }
+
+        [Test]
+        public void Remove_正常系()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+            var id = 1;
+
+            // Act
+            _service.Remove(id);
+
+            // Assert
+            _mock.Verify(_ => _.Remove(It.IsAny<Todo>()), Times.Once);
+        }
+
+        [Test]
+        public void Remove_存在しないID_ApiNotFoundExceptionが発生()
+        {
+            // Arrange
+            _mock.Setup(_ => _.Get())
+                .Returns(_data);
+            _service = new TodoService(_mock.Object);
+
+            // Act・Assert
+            Assert.That(() => _service.Remove(999), Throws.TypeOf<ApiNotFoundException>());
+        }
     }
 }
