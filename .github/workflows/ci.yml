@@ -41,10 +41,21 @@ jobs:
       shell: pwsh
       run: |
         Write-Host "Restoring NuGet packages for packages.config projects..."
-        nuget restore ${{ env.SOLUTION_FILE }}
+        nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages
         if ($LASTEXITCODE -ne 0) {
           Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
+        }
+        
+        # Verify packages were restored
+        if (Test-Path "packages\Newtonsoft.Json.13.0.1") {
+          Write-Host "✓ Newtonsoft.Json package found"
+        } else {
+          Write-Warning "✗ Newtonsoft.Json package not found"
+          Write-Host "Available packages:"
+          if (Test-Path "packages") {
+            Get-ChildItem -Path "packages" -Directory | Select-Object -First 10 Name
+          }
         }
 
     - name: Restore NuGet packages (SDK style)
@@ -57,14 +68,72 @@ jobs:
           exit $LASTEXITCODE
         }
 
+    - name: Verify NuGet packages restoration
+      shell: pwsh
+      run: |
+        Write-Host "Verifying NuGet packages restoration..."
+        $requiredPackages = @(
+          "Newtonsoft.Json.13.0.1",
+          "Microsoft.Owin.4.2.2",
+          "Microsoft.AspNet.WebApi.Core.5.2.9"
+        )
+        
+        $missingPackages = @()
+        foreach ($package in $requiredPackages) {
+          $packagePath = "packages\$package"
+          if (Test-Path $packagePath) {
+            Write-Host "✓ $package found"
+          } else {
+            Write-Warning "✗ $package NOT found"
+            $missingPackages += $package
+          }
+        }
+        
+        if ($missingPackages.Count -gt 0) {
+          Write-Error "Missing packages: $($missingPackages -join ', ')"
+          Write-Host "Available packages in packages directory:"
+          if (Test-Path "packages") {
+            Get-ChildItem -Path "packages" -Directory | Select-Object -First 20 Name | ForEach-Object {
+              Write-Host "  - $($_.Name)"
+            }
+          }
+          exit 1
+        }
+        
+        Write-Host "All required packages are restored"
+
     - name: Build solution
       shell: pwsh
       run: |
         Write-Host "Building solution: ${{ env.SOLUTION_FILE }}"
         Write-Host "Configuration: ${{ env.BUILD_CONFIGURATION }}"
-        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="Any CPU" /t:Build /v:minimal /p:RestorePackagesConfig=true
+        Write-Host "Platform: Any CPU"
+        
+        # Build with explicit package restore
+        msbuild ${{ env.SOLUTION_FILE }} `
+          /p:Configuration=${{ env.BUILD_CONFIGURATION }} `
+          /p:Platform="Any CPU" `
+          /t:Build `
+          /v:minimal `
+          /p:RestorePackagesConfig=true `
+          /p:RestorePackages=true `
+          /p:SolutionDir="$(Get-Location)\" `
+          /p:PackagesDir="$(Get-Location)\packages"
+        
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Build failed with exit code $LASTEXITCODE"
+          Write-Host "Checking packages directory..."
+          if (Test-Path "packages") {
+            Write-Host "Packages directory exists"
+            $newtonsoftPath = "packages\Newtonsoft.Json.13.0.1"
+            if (Test-Path $newtonsoftPath) {
+              Write-Host "Newtonsoft.Json package found at: $newtonsoftPath"
+            } else {
+              Write-Host "Newtonsoft.Json package NOT found"
+            }
+          } else {
+            Write-Host "Packages directory does not exist"
+          }
           exit $LASTEXITCODE
         }
         Write-Host "Build completed successfully"
