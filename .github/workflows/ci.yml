@@ -37,21 +37,12 @@ jobs:
     - name: Setup NuGet
       uses: NuGet/setup-nuget@v1.1.0
 
-    - name: Restore NuGet packages (packages.config)
+    - name: Restore NuGet packages
       shell: pwsh
       run: |
         nuget restore ${{ env.SOLUTION_FILE }} -PackagesDirectory packages -NonInteractive
         if ($LASTEXITCODE -ne 0) {
           Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
-          exit $LASTEXITCODE
-        }
-
-    - name: Restore NuGet packages (SDK style)
-      shell: pwsh
-      run: |
-        dotnet restore ${{ env.SOLUTION_FILE }}
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "dotnet restore failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
         }
 
@@ -61,7 +52,7 @@ jobs:
         msbuild ${{ env.SOLUTION_FILE }} `
           /p:Configuration=${{ env.BUILD_CONFIGURATION }} `
           /p:Platform="Any CPU" `
-          /t:Build `
+          /t:Restore,Build `
           /v:minimal
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Build failed with exit code $LASTEXITCODE"
