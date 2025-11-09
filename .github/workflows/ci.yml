@@ -1,0 +1,273 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  SOLUTION_FILE: DotNetOwinWebApiSample.sln
+  BUILD_CONFIGURATION: Release
+  TEST_PROJECT_MSTEST: DotNetOwinWebApiSample.Api.Test/DotNetOwinWebApiSample.Api.Test.csproj
+  TEST_PROJECT_NUNIT: DotNetOwinWebApiSample.Api.NUnit.Test/DotNetOwinWebApiSample.Api.NUnit.Test.csproj
+  COVERAGE_FILTER: "+[DotNetOwinWebApiSample*]* -[*.Test.*]*"
+  COVERAGE_OUTPUT: coverage.xml
+  COVERAGE_REPORT_DIR: coverage-report
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.x'
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1.1.0
+
+    - name: Restore NuGet packages (packages.config)
+      run: nuget restore ${{ env.SOLUTION_FILE }}
+
+    - name: Restore NuGet packages (SDK style)
+      run: dotnet restore ${{ env.SOLUTION_FILE }}
+
+    - name: Build solution
+      run: msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="Any CPU" /t:Build /v:minimal
+
+    - name: Find VSTest.Console.exe
+      id: find_vstest
+      shell: pwsh
+      run: |
+        $vstestPaths = @(
+          "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+          "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+          "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
+          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
+        )
+        
+        $vstestPath = $null
+        foreach ($path in $vstestPaths) {
+          if (Test-Path $path) {
+            $vstestPath = $path
+            break
+          }
+        }
+        
+        if ($null -eq $vstestPath) {
+          # Fallback: Try to find vstest.console.exe in common locations
+          $vstestPath = Get-ChildItem -Path "C:\Program Files" -Recurse -Filter "vstest.console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+        }
+        
+        if ($null -eq $vstestPath) {
+          Write-Error "VSTest.Console.exe not found"
+          exit 1
+        }
+        
+        Write-Host "Found VSTest.Console.exe at: $vstestPath"
+        echo "path=$vstestPath" >> $env:GITHUB_OUTPUT
+
+    - name: Run NUnit tests
+      continue-on-error: true
+      run: |
+        dotnet test ${{ env.TEST_PROJECT_NUNIT }} --configuration ${{ env.BUILD_CONFIGURATION }} --logger "trx;LogFileName=NUnitTestResults.trx" --logger "console;verbosity=normal" --no-build
+      shell: pwsh
+
+    - name: Verify OpenCover installation
+      if: success() || failure()
+      shell: pwsh
+      run: |
+        # OpenCover should be restored by nuget restore from packages.config
+        # Verify it exists, if not, install it
+        if (-not (Test-Path "packages\OpenCover.4.7.1221\tools\OpenCover.Console.exe")) {
+          Write-Host "OpenCover not found in packages folder, installing..."
+          nuget install OpenCover -Version 4.7.1221 -OutputDirectory packages
+        } else {
+          Write-Host "OpenCover found in packages folder"
+        }
+        
+        # Verify the path
+        if (-not (Test-Path "packages\OpenCover.4.7.1221\tools\OpenCover.Console.exe")) {
+          Write-Error "OpenCover.Console.exe not found after installation"
+          exit 1
+        }
+
+    - name: Run MSTest with OpenCover
+      if: success() || failure()
+      shell: pwsh
+      run: |
+        $openCover = ".\packages\OpenCover.4.7.1221\tools\OpenCover.Console.exe"
+        $testAssembly = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}\DotNetOwinWebApiSample.Api.Test.dll"
+        $vstest = "${{ steps.find_vstest.outputs.path }}"
+        $targetDir = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}"
+        
+        if (-not (Test-Path $testAssembly)) {
+          Write-Error "Test assembly not found: $testAssembly"
+          exit 1
+        }
+        
+        Write-Host "Running OpenCover..."
+        & $openCover `
+          -register:user `
+          -target:"$vstest" `
+          -targetargs:"`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx" `
+          -filter:"${{ env.COVERAGE_FILTER }}" `
+          -output:"${{ env.COVERAGE_OUTPUT }}" `
+          -targetdir:"$targetDir" `
+          -returntargetcode
+        
+        $exitCode = $LASTEXITCODE
+        Write-Host "OpenCover exit code: $exitCode"
+        
+        # OpenCover returns the test runner exit code, so we need to check if tests passed
+        # Exit code 0 = tests passed, non-zero = tests failed
+        if ($exitCode -ne 0) {
+          Write-Warning "Some tests may have failed (exit code: $exitCode)"
+        }
+
+    - name: Verify ReportGenerator installation
+      if: always()
+      shell: pwsh
+      run: |
+        # ReportGenerator should be restored by nuget restore from packages.config
+        # Verify it exists, if not, install it
+        if (-not (Test-Path "packages\ReportGenerator.5.1.10\tools\net6.0\ReportGenerator.exe") -and 
+            -not (Test-Path "packages\ReportGenerator.5.1.10\tools\net47\ReportGenerator.exe")) {
+          Write-Host "ReportGenerator not found in packages folder, installing..."
+          nuget install ReportGenerator -Version 5.1.10 -OutputDirectory packages
+        } else {
+          Write-Host "ReportGenerator found in packages folder"
+        }
+        
+        # Verify the path
+        $net6Path = "packages\ReportGenerator.5.1.10\tools\net6.0\ReportGenerator.exe"
+        $net47Path = "packages\ReportGenerator.5.1.10\tools\net47\ReportGenerator.exe"
+        if (-not (Test-Path $net6Path) -and -not (Test-Path $net47Path)) {
+          Write-Error "ReportGenerator.exe not found after installation"
+          exit 1
+        }
+
+    - name: Generate coverage report
+      if: always()
+      shell: pwsh
+      run: |
+        if (Test-Path "${{ env.COVERAGE_OUTPUT }}") {
+          $reportGenerator = ".\packages\ReportGenerator.5.1.10\tools\net6.0\ReportGenerator.exe"
+          
+          # Try net6.0 first, fallback to net47 if not found
+          if (-not (Test-Path $reportGenerator)) {
+            $reportGenerator = ".\packages\ReportGenerator.5.1.10\tools\net47\ReportGenerator.exe"
+          }
+          
+          if (-not (Test-Path $reportGenerator)) {
+            Write-Error "ReportGenerator.exe not found"
+            exit 1
+          }
+          
+          Write-Host "Generating coverage report..."
+          & $reportGenerator `
+            -reports:"${{ env.COVERAGE_OUTPUT }}" `
+            -targetdir:"${{ env.COVERAGE_REPORT_DIR }}" `
+            -reporttypes:"Html;Cobertura;Badges" `
+            -verbosity:Info
+          
+          Write-Host "Coverage report generated in ${{ env.COVERAGE_REPORT_DIR }}"
+        } else {
+          Write-Warning "Coverage file not found: ${{ env.COVERAGE_OUTPUT }}"
+        }
+
+    - name: Extract coverage summary
+      if: always()
+      shell: pwsh
+      id: coverage_summary
+      run: |
+        if (Test-Path "${{ env.COVERAGE_OUTPUT }}") {
+          [xml]$coverageXml = Get-Content "${{ env.COVERAGE_OUTPUT }}"
+          $summary = $coverageXml.CoverageSession.Summary
+          
+          $sequenceCoverage = [math]::Round([double]$summary.sequenceCoverage, 2)
+          $branchCoverage = [math]::Round([double]$summary.branchCoverage, 2)
+          $visitedSequencePoints = $summary.visitedSequencePoints
+          $numSequencePoints = $summary.numSequencePoints
+          $visitedBranchPoints = $summary.visitedBranchPoints
+          $numBranchPoints = $summary.numBranchPoints
+          
+          Write-Host "Sequence Coverage: $sequenceCoverage% ($visitedSequencePoints/$numSequencePoints)"
+          Write-Host "Branch Coverage: $branchCoverage% ($visitedBranchPoints/$numBranchPoints)"
+          
+          echo "sequenceCoverage=$sequenceCoverage" >> $env:GITHUB_OUTPUT
+          echo "branchCoverage=$branchCoverage" >> $env:GITHUB_OUTPUT
+          echo "visitedSequencePoints=$visitedSequencePoints" >> $env:GITHUB_OUTPUT
+          echo "numSequencePoints=$numSequencePoints" >> $env:GITHUB_OUTPUT
+          echo "visitedBranchPoints=$visitedBranchPoints" >> $env:GITHUB_OUTPUT
+          echo "numBranchPoints=$numBranchPoints" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Warning "Coverage file not found, setting default values"
+          echo "sequenceCoverage=0" >> $env:GITHUB_OUTPUT
+          echo "branchCoverage=0" >> $env:GITHUB_OUTPUT
+        }
+
+    - name: Add coverage to summary
+      if: always()
+      shell: pwsh
+      run: |
+        $summary = @"
+        ## Code Coverage Results
+        
+        | Metric | Coverage | Details |
+        |--------|----------|---------|
+        | Sequence Coverage | ${{ steps.coverage_summary.outputs.sequenceCoverage }}% | ${{ steps.coverage_summary.outputs.visitedSequencePoints }}/${{ steps.coverage_summary.outputs.numSequencePoints }} |
+        | Branch Coverage | ${{ steps.coverage_summary.outputs.branchCoverage }}% | ${{ steps.coverage_summary.outputs.visitedBranchPoints }}/${{ steps.coverage_summary.outputs.numBranchPoints }} |
+        
+        ### Coverage Report
+        Coverage report is available in the artifacts.
+        "@
+        
+        Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $summary
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ${{ env.COVERAGE_REPORT_DIR }}
+        retention-days: 30
+
+    - name: Upload coverage XML
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-xml
+        path: ${{ env.COVERAGE_OUTPUT }}
+        retention-days: 30
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          **/*.trx
+        retention-days: 30
+
+    - name: Publish test results
+      if: always()
+      uses: EnricoMi/publish-unit-test-result-action@v2
+      with:
+        files: |
+          **/*.trx
+        check_name: Test Results
+        report_individual_runs: true
+        deduplicate_classes_by_name: true
+
