@@ -242,13 +242,3 @@ jobs:
           **/*.trx
         retention-days: 30
 
-    - name: Publish test results
-      if: always()
-      uses: EnricoMi/publish-unit-test-result-action@v2
-      with:
-        files: |
-          **/*.trx
-        check_name: Test Results
-        report_individual_runs: true
-        deduplicate_classes_by_name: true
-
