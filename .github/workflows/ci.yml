@@ -73,7 +73,7 @@ jobs:
           exit 0
         }
         
-        vstest.console.exe $testAssembly /Logger:trx;LogFileName=NUnitTestResults.trx /Logger:console
+        vstest.console.exe $testAssembly "/Logger:trx;LogFileName=NUnitTestResults.trx" /Logger:console
         
         if ($LASTEXITCODE -ne 0) {
           Write-Warning "NUnit tests failed with exit code $LASTEXITCODE"
@@ -100,10 +100,11 @@ jobs:
           exit 1
         }
         
+        $targetArgs = "`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx"
         & $openCover `
           -register:user `
           -target:"vstest.console.exe" `
-          -targetargs:"`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx" `
+          -targetargs:$targetArgs `
           -filter:"${{ env.COVERAGE_FILTER }}" `
           -output:"${{ env.COVERAGE_OUTPUT }}" `
           -targetdir:"$targetDir" `
