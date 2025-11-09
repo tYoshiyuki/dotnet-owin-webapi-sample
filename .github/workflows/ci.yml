@@ -68,58 +68,18 @@ jobs:
           exit $LASTEXITCODE
         }
 
-    - name: Find VSTest.Console.exe
-      id: find_vstest
-      shell: pwsh
-      run: |
-        $vstestPaths = @(
-          "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-          "C:\Program Files\Microsoft Visual Studio\2022\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-          "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe",
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\CommonExtensions\Microsoft\TestWindow\vstest.console.exe"
-        )
-        
-        $vstestPath = $null
-        foreach ($path in $vstestPaths) {
-          if (Test-Path $path) {
-            $vstestPath = $path
-            break
-          }
-        }
-        
-        if ($null -eq $vstestPath) {
-          # Fallback: Try to find vstest.console.exe in common locations
-          $vstestPath = Get-ChildItem -Path "C:\Program Files" -Recurse -Filter "vstest.console.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-        }
-        
-        if ($null -eq $vstestPath) {
-          Write-Error "VSTest.Console.exe not found"
-          exit 1
-        }
-        
-        Write-Host "Found VSTest.Console.exe at: $vstestPath"
-        echo "path=$vstestPath" >> $env:GITHUB_OUTPUT
-
     - name: Run NUnit tests
       continue-on-error: true
       shell: pwsh
       run: |
         $testAssembly = "DotNetOwinWebApiSample.Api.NUnit.Test\bin\${{ env.BUILD_CONFIGURATION }}\net48\DotNetOwinWebApiSample.Api.NUnit.Test.dll"
-        $vstest = "${{ steps.find_vstest.outputs.path }}"
         
         if (-not (Test-Path $testAssembly)) {
           Write-Warning "NUnit test assembly not found: $testAssembly"
           exit 0
         }
         
-        if (-not (Test-Path $vstest)) {
-          Write-Warning "VSTest.Console.exe not found: $vstest"
-          exit 0
-        }
-        
-        & $vstest $testAssembly /Logger:trx;LogFileName=NUnitTestResults.trx /Logger:console
+        vstest.console.exe $testAssembly /Logger:trx;LogFileName=NUnitTestResults.trx /Logger:console
         
         if ($LASTEXITCODE -ne 0) {
           Write-Warning "NUnit tests failed with exit code $LASTEXITCODE"
@@ -139,65 +99,24 @@ jobs:
       run: |
         $openCover = ".\packages\OpenCover.4.7.1221\tools\OpenCover.Console.exe"
         $testAssembly = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}\DotNetOwinWebApiSample.Api.Test.dll"
-        $vstest = "${{ steps.find_vstest.outputs.path }}"
         $targetDir = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}"
         
-        # Convert to absolute path
-        $testAssemblyPath = Resolve-Path -Path $testAssembly -ErrorAction SilentlyContinue
-        $targetDirPath = Resolve-Path -Path $targetDir -ErrorAction SilentlyContinue
-        
-        Write-Host "Checking test assembly: $testAssembly"
-        Write-Host "Current directory: $(Get-Location)"
-        
-        if (-not $testAssemblyPath) {
+        if (-not (Test-Path $testAssembly)) {
           Write-Error "Test assembly not found: $testAssembly"
-          Write-Host "Searching for test assemblies..."
-          $binDir = "DotNetOwinWebApiSample.Api.Test\bin"
-          if (Test-Path $binDir) {
-            Write-Host "Available files in test project bin directory:"
-            Get-ChildItem -Path $binDir -Recurse -File -Filter "*.dll" | ForEach-Object {
-              Write-Host "  $($_.FullName)"
-            }
-          } else {
-            Write-Host "Bin directory not found: $binDir"
-          }
           exit 1
         }
         
-        if (-not $targetDirPath) {
-          $targetDirPath = (Get-Item $testAssemblyPath).DirectoryName
-          Write-Host "Using target directory from test assembly: $targetDirPath"
-        }
-        
-        Write-Host "Running OpenCover with:"
-        Write-Host "  OpenCover: $openCover"
-        Write-Host "  Test Assembly: $testAssemblyPath"
-        Write-Host "  VSTest: $vstest"
-        Write-Host "  Target Dir: $targetDirPath"
-        
         & $openCover `
           -register:user `
-          -target:"$vstest" `
-          -targetargs:"`"$testAssemblyPath`" /Logger:trx;LogFileName=MSTestResults.trx" `
+          -target:"vstest.console.exe" `
+          -targetargs:"`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx" `
           -filter:"${{ env.COVERAGE_FILTER }}" `
           -output:"${{ env.COVERAGE_OUTPUT }}" `
-          -targetdir:"$targetDirPath" `
+          -targetdir:"$targetDir" `
           -returntargetcode
         
-        $exitCode = $LASTEXITCODE
-        Write-Host "OpenCover exit code: $exitCode"
-        
-        # Check if coverage file was generated
-        if (Test-Path "${{ env.COVERAGE_OUTPUT }}") {
-          Write-Host "Coverage file generated successfully: ${{ env.COVERAGE_OUTPUT }}"
-        } else {
-          Write-Warning "Coverage file was not generated"
-        }
-        
-        # OpenCover returns the test runner exit code, so we need to check if tests passed
-        # Exit code 0 = tests passed, non-zero = tests failed
-        if ($exitCode -ne 0) {
-          Write-Warning "Some tests may have failed (exit code: $exitCode)"
+        if ($LASTEXITCODE -ne 0) {
+          Write-Warning "Tests may have failed (exit code: $LASTEXITCODE)"
         }
 
     - name: Install ReportGenerator
