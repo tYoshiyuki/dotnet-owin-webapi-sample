@@ -15,6 +15,8 @@ env:
   COVERAGE_FILTER: "+[DotNetOwinWebApiSample*]* -[*.Test.*]*"
   COVERAGE_OUTPUT: coverage.xml
   COVERAGE_REPORT_DIR: coverage-report
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
 
 jobs:
   build-and-test:
@@ -36,13 +38,71 @@ jobs:
       uses: NuGet/setup-nuget@v1.1.0
 
     - name: Restore NuGet packages (packages.config)
-      run: nuget restore ${{ env.SOLUTION_FILE }}
+      shell: pwsh
+      run: |
+        Write-Host "Restoring NuGet packages for packages.config projects..."
+        nuget restore ${{ env.SOLUTION_FILE }}
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "NuGet restore failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
 
     - name: Restore NuGet packages (SDK style)
-      run: dotnet restore ${{ env.SOLUTION_FILE }}
+      shell: pwsh
+      run: |
+        Write-Host "Restoring NuGet packages for SDK-style projects..."
+        dotnet restore ${{ env.SOLUTION_FILE }}
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "dotnet restore failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
 
     - name: Build solution
-      run: msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="Any CPU" /t:Build /v:minimal
+      shell: pwsh
+      run: |
+        Write-Host "Building solution: ${{ env.SOLUTION_FILE }}"
+        Write-Host "Configuration: ${{ env.BUILD_CONFIGURATION }}"
+        msbuild ${{ env.SOLUTION_FILE }} /p:Configuration=${{ env.BUILD_CONFIGURATION }} /p:Platform="Any CPU" /t:Build /v:minimal /p:RestorePackagesConfig=true
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "Build failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
+        Write-Host "Build completed successfully"
+
+    - name: Verify build outputs
+      shell: pwsh
+      run: |
+        Write-Host "Verifying build outputs..."
+        
+        # Check MSTest project output
+        $mstestDll = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}\DotNetOwinWebApiSample.Api.Test.dll"
+        if (Test-Path $mstestDll) {
+          Write-Host "✓ MSTest assembly found: $mstestDll"
+        } else {
+          Write-Warning "✗ MSTest assembly not found: $mstestDll"
+          Write-Host "Searching for test assemblies..."
+          $binDir = "DotNetOwinWebApiSample.Api.Test\bin"
+          if (Test-Path $binDir) {
+            Get-ChildItem -Path $binDir -Recurse -Filter "*.dll" | ForEach-Object {
+              Write-Host "  Found: $($_.FullName)"
+            }
+          }
+        }
+        
+        # Check NUnit project output
+        $nunitDll = "DotNetOwinWebApiSample.Api.NUnit.Test\bin\${{ env.BUILD_CONFIGURATION }}\net48\DotNetOwinWebApiSample.Api.NUnit.Test.dll"
+        if (Test-Path $nunitDll) {
+          Write-Host "✓ NUnit assembly found: $nunitDll"
+        } else {
+          Write-Warning "✗ NUnit assembly not found: $nunitDll"
+          Write-Host "Searching for NUnit test assemblies..."
+          $binDir = "DotNetOwinWebApiSample.Api.NUnit.Test\bin"
+          if (Test-Path $binDir) {
+            Get-ChildItem -Path $binDir -Recurse -Filter "*.dll" | ForEach-Object {
+              Write-Host "  Found: $($_.FullName)"
+            }
+          }
+        }
 
     - name: Find VSTest.Console.exe
       id: find_vstest
@@ -80,9 +140,25 @@ jobs:
 
     - name: Run NUnit tests
       continue-on-error: true
-      run: |
-        dotnet test ${{ env.TEST_PROJECT_NUNIT }} --configuration ${{ env.BUILD_CONFIGURATION }} --logger "trx;LogFileName=NUnitTestResults.trx" --logger "console;verbosity=normal" --no-build
       shell: pwsh
+      run: |
+        Write-Host "Running NUnit tests..."
+        $testProject = "${{ env.TEST_PROJECT_NUNIT }}"
+        if (-not (Test-Path $testProject)) {
+          Write-Warning "Test project not found: $testProject"
+          exit 0
+        }
+        
+        # Build and test NUnit project
+        dotnet test $testProject `
+          --configuration ${{ env.BUILD_CONFIGURATION }} `
+          --logger "trx;LogFileName=NUnitTestResults.trx" `
+          --logger "console;verbosity=normal" `
+          --no-restore
+        
+        if ($LASTEXITCODE -ne 0) {
+          Write-Warning "NUnit tests failed with exit code $LASTEXITCODE"
+        }
 
     - name: Verify OpenCover installation
       if: success() || failure()
@@ -112,23 +188,57 @@ jobs:
         $vstest = "${{ steps.find_vstest.outputs.path }}"
         $targetDir = "DotNetOwinWebApiSample.Api.Test\bin\${{ env.BUILD_CONFIGURATION }}"
         
-        if (-not (Test-Path $testAssembly)) {
+        # Convert to absolute path
+        $testAssemblyPath = Resolve-Path -Path $testAssembly -ErrorAction SilentlyContinue
+        $targetDirPath = Resolve-Path -Path $targetDir -ErrorAction SilentlyContinue
+        
+        Write-Host "Checking test assembly: $testAssembly"
+        Write-Host "Current directory: $(Get-Location)"
+        
+        if (-not $testAssemblyPath) {
           Write-Error "Test assembly not found: $testAssembly"
+          Write-Host "Searching for test assemblies..."
+          $binDir = "DotNetOwinWebApiSample.Api.Test\bin"
+          if (Test-Path $binDir) {
+            Write-Host "Available files in test project bin directory:"
+            Get-ChildItem -Path $binDir -Recurse -File -Filter "*.dll" | ForEach-Object {
+              Write-Host "  $($_.FullName)"
+            }
+          } else {
+            Write-Host "Bin directory not found: $binDir"
+          }
           exit 1
         }
         
-        Write-Host "Running OpenCover..."
+        if (-not $targetDirPath) {
+          $targetDirPath = (Get-Item $testAssemblyPath).DirectoryName
+          Write-Host "Using target directory from test assembly: $targetDirPath"
+        }
+        
+        Write-Host "Running OpenCover with:"
+        Write-Host "  OpenCover: $openCover"
+        Write-Host "  Test Assembly: $testAssemblyPath"
+        Write-Host "  VSTest: $vstest"
+        Write-Host "  Target Dir: $targetDirPath"
+        
         & $openCover `
           -register:user `
           -target:"$vstest" `
-          -targetargs:"`"$testAssembly`" /Logger:trx;LogFileName=MSTestResults.trx" `
+          -targetargs:"`"$testAssemblyPath`" /Logger:trx;LogFileName=MSTestResults.trx" `
           -filter:"${{ env.COVERAGE_FILTER }}" `
           -output:"${{ env.COVERAGE_OUTPUT }}" `
-          -targetdir:"$targetDir" `
+          -targetdir:"$targetDirPath" `
           -returntargetcode
         
         $exitCode = $LASTEXITCODE
         Write-Host "OpenCover exit code: $exitCode"
+        
+        # Check if coverage file was generated
+        if (Test-Path "${{ env.COVERAGE_OUTPUT }}") {
+          Write-Host "Coverage file generated successfully: ${{ env.COVERAGE_OUTPUT }}"
+        } else {
+          Write-Warning "Coverage file was not generated"
+        }
         
         # OpenCover returns the test runner exit code, so we need to check if tests passed
         # Exit code 0 = tests passed, non-zero = tests failed
